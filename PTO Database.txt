@@ -1,0 +1,84 @@
+CREATE DATABASE PTO_Tracker
+
+
+CREATE TABLE `users` (
+    `user_id` INT NOT NULL AUTO_INCREMENT,
+    `email` VARCHAR(255) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `full_name` VARCHAR(255) NOT NULL,
+    `role` ENUM('AGENT', 'ADMIN') NOT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`user_id`),
+    INDEX `idx_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE `management_units` (
+    `mu_id` INT NOT NULL AUTO_INCREMENT,
+    `mu_name` VARCHAR(100) NOT NULL UNIQUE,
+    `line_of_work` VARCHAR(255) NOT NULL,
+    PRIMARY KEY (`mu_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE `agents` (
+    `agent_id` INT NOT NULL AUTO_INCREMENT,
+    `employee_number` VARCHAR(50) NOT NULL UNIQUE,
+    `user_id` INT NOT NULL UNIQUE,
+    `mu_id` INT NOT NULL,
+    `approver_name` VARCHAR(255) NULL,
+    `workday_id` VARCHAR(100) NULL,
+    PRIMARY KEY (`agent_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`mu_id`) REFERENCES `management_units`(`mu_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE `daily_allotments` (
+    `allotment_id` INT NOT NULL AUTO_INCREMENT,
+    `allotment_date` DATE NOT NULL,
+    `mu_id` INT NOT NULL,
+    `available_slots` INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (`allotment_id`),
+    UNIQUE KEY `uk_date_mu` (`allotment_date`, `mu_id`),
+    FOREIGN KEY (`mu_id`) REFERENCES `management_units`(`mu_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE `requests` (
+    `request_id` VARCHAR(255) NOT NULL,
+    `agent_id` INT NOT NULL,
+    `request_type` ENUM('vacation', 'PDO', 'BDL') NOT NULL,
+    `request_date` DATE NOT NULL,
+    `status` ENUM('submitted', 'approved', 'cancelled', 'cancel_review', 'completed', 'not_in_wd') NOT NULL DEFAULT 'submitted',
+    `submission_timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_by_user_id` INT NULL COMMENT 'Admin que modificó el estado',
+    `last_update_timestamp` TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    `escalated_approver_name` VARCHAR(255) NULL,
+    PRIMARY KEY (`request_id`),
+    FOREIGN KEY (`agent_id`) REFERENCES `agents`(`agent_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`updated_by_user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL,
+    INDEX `idx_request_date_status` (`request_date`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `password_reset_tokens` (
+    `token_id` INT NOT NULL AUTO_INCREMENT,
+    `token_hash` VARCHAR(255) NOT NULL UNIQUE,
+    `user_id` INT NOT NULL,
+    `expires_at` TIMESTAMP NOT NULL,
+    PRIMARY KEY (`token_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE `sessions` (
+    `session_id` INT NOT NULL AUTO_INCREMENT,
+    `session_token` VARCHAR(255) NOT NULL UNIQUE,
+    `user_id` INT NOT NULL,
+    `expires_at` TIMESTAMP NOT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`session_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE,
+    INDEX `idx_session_token` (`session_token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
